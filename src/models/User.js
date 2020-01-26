@@ -10,9 +10,7 @@ module.exports = {
 	// Get user datas
 	get: (key, value) => {
 		let sql = 'select * from users'
-		if (key && value) sql += ` where ${key}=${value}`
-
-		return promise(sql);
+		key && value ? promise(sql += ` where ${key}=${value}`) : promise(sql)
 	},
 
 	// Login to user account
