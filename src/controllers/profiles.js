@@ -4,79 +4,79 @@ const uuid = require('uuid/v4')
 const Profile = require('../models/Profile')
 
 // JSON Response
-const success = { status: 200, error: false, message: '', data: [] }
-const error = { status: 400, error: true, message: '', data: [] }
+const response = (code, error, message, data = []) => {
+	return status(code).json({ status: code, error, message, data })
+}
 
 module.exports = {
 	// Get user profile
-	get: (req, res) => {
-		const { userId } = req.params
+	get: async (req, res) => {
+		try {
+			const { userId } = req.params
 
-		Profile.get(userId)
-			.then(result => {
-				success.message = 'Success to get user profile'
-				success.data = result
-				res.status(200).json(success)
-			})
-			.catch(err => {
-				error.message = 'Failed to get user profile'
-				error.data = err
-				res.status(400).json(error)
-			})
+			// Check user's' id
+			const user = await Profile.get('id', userId)
+			if (!user) return res.promise(404, true, "User's profile is not found")
+
+			return res.response(200, false, 'Success to get user profile', user)
+		} catch (err) {
+			res.response(400, true, 'Failed to get user profile', err)
+		}
 	},
 
 	// Add user profile
-	add: (req, res) => {
-		const { userId } = req.params
-		const id = uuid()
-		const { username, address, phone } = req.body
-		const data = { id, userId, username, address, phone }
+	add: async (req, res) => {
+		try {
+			const { userId } = req.params
+			const id = uuid()
+			const { username, address, phone } = req.body
+			const data = { id, userId, username, address, phone }
 
-		Profile.add(data)
-			.then(() => {
-				success.message = 'Success to add profile'
-				success.data = data
-				res.status(200).json(success)
-			})
-			.catch(err => {
-				error.message = 'Failed to add profile'
-				error.data = err
-				res.status(400).json(error)
-			})
+			// Check user's' id
+			const user = await Profile.get('id', userId)
+			if (!user) return res.promise(404, true, "User's profile is not found")
+
+			// Added user's profile
+			const added = await Profile.add(data)
+			if (added) return res.response(200, false, 'Success to add profile', added)
+		} catch (err) {
+			return res.response(400, true, 'Failed to add profile', err)
+		}
 	},
 
 	// Update user profile
-	update: (req, res) => {
-		const { userId } = req.params
-		const { username, address, phone } = req.body
-		const data = { username, address, phone }
+	update: async (req, res) => {
+		try {
+			const { userId } = req.params
+			const { username, address, phone } = req.body
+			const data = { username, address, phone }
 
-		Profile.update(data, userId)
-			.then(result => {
-				success.message = 'Success to update user profile'
-				success.data = result
-				res.status(200).json(success)
-			})
-			.catch(err => {
-				error.message = 'Failed to update user profile'
-				error.data = err
-				res.status(400).json(error)
-			})
+			// Check user's' id
+			const user = await Profile.get('id', userId)
+			if (!user) return res.promise(404, true, "User's profile is not found")
+
+			// Update user's profile
+			const updated = await Profile.update(data, id)
+			if (updated) return res.response(200, false, 'Success to update user profile', updated)
+		} catch (err) {
+			return res.response(400, true, 'Failed to update user profile', err)
+		}
 	},
 
 	// Delete user profile
-	delete: (req, res) => {
-		const { userId } = req.params
+	delete: async (req, res) => {
+		try {
+			const { userId } = req.params
 
-		Profile.delete(userId)
-			.then(() => {
-				success.message = 'Success to delete user profile'
-				res.status(200).json(success)
-			})
-			.catch(err => {
-				error.message = 'Failed to delete user profile'
-				error.data = err
-				res.status(400).json(error)
-			})
-	}
+			// Check user's id
+			const user = await Profile.get('id', userId)
+			if (!user) return res.promise(404, true, "User's profile is not found")
+
+			// Delete user's profile
+			const deleted = await Profile.delete(userId)
+			if (deleted) return res.promise(200, false, 'Success to delete user profile', user)
+		} catch (err) {
+			return res.response(400, true, 'Failed to delete user profile', err)
+		}
+	},
 }

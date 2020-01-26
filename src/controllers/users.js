@@ -7,117 +7,100 @@ require('dotenv/config')
 const User = require('../models/User')
 
 // JSON Response
-const success = { status: 200, error: false, message: '', data: [] }
-const error = { status: 400, error: true, message: '', data: [] }
+const response = (code, error, message, data = []) => {
+	return status(code).json({ status: code, error, message, data })
+}
 
 module.exports = {
 	// Get user datas
-	get: (req, res) => {
-		const { id } = req.params
-
-		User.get(id)
-			.then(result => {
-				success.message = 'Success to get user data'
-				success.data = result
-				res.status(200).json(success)
-			})
-			.catch(err => {
-				error.message = 'Failed to get user data'
-				error.data = err
-				res.status(404).json(error)
-			})
+	get: async (req, res) => {
+		try {
+			const { id } = req.params
+			const user = await User.get('id', id)
+			if (user) return res.response(200, false, 'Success to get user data', user)
+		} catch (err) {
+			return res.response(400, false, 'Failed to get user data', err)
+		}
 	},
 
 	// Login to user account
-	login: (req, res) => {
-		const { email, password } = req.body
+	login: async (req, res) => {
+		try {
+			const { email, password } = req.body
 
-		User.get().then(users => {
-			const user = users.filter(person => person.email === email)
-			const isMatch = compareSync(password, user[0].password)
+			// Check user's email is already register
+			const user = await User.get('email', email)
+			if (!user) return res.response(404, true, 'Email not registered yet')
 
-			if (isMatch) {
-				User.login(email, password).then(result => {
-					// Payload
-					const payload = {
-						id: result.id,
-						name: result.name,
-						email: result.email
-					}
+			// Check user's password match
+			const isValid = compareSync(password, user.password)
+			if (!isValid) return res.response(400, true, 'Password is invalid')
 
-					// Token
-					jwt.sign(payload, process.env.SECRET_OR_KEY, { expiresIn: 3600 }, (err, token) => {
-						if (err) throw new Error(err)
-						success.message = 'Success to login'
-						success.data = [{ id: payload.id, token: 'Bearer ' + token }]
-						res.status(200).json(success)
-					})
-				})
-			} else {
-				error.message = 'Password is invalid'
-				res.status(400).json(error)
-			}
-		})
+			// Token
+			const payload = { id: user.id, name: user.name, email: user.email }
+			const token = await jwt.sign(payload, process.env.SECRET_OR_KEY, { expiresIn: 3600 })
+			return res.response(200, false, 'Success to login', { token: 'Bearer ' + token })
+		} catch (err) {
+			return res.response(400, false, 'Failed to login', err)
+		}
 	},
 
 	// Register new account
-	register: (req, res) => {
-		const id = uuid()
-		const { name, email, password } = req.body
-		const data = { id, name, email, password }
+	register: async (req, res) => {
+		try {
+			const id = uuid()
+			const { name, email, password } = req.body
+			const data = { id, name, email, password }
 
-		User.register(data)
-			.then(result => {
-				success.message = 'Success to register new account'
-				success.data = result
-				res.status(200).json(success)
-			})
-			.catch(err => {
-				error.message = 'Failed to register new account'
-				error.data = err
-				res.status(400).json(error)
-			})
+			// Check user's email
+			const user = await User.get('email', email)
+			if (email) return res.response(400, true, 'Email was registered')
+
+			// Register new user
+			const registered = await User.register(data)
+			if (registered)
+				return res.response(200, false, 'Success to register new user', registered)
+		} catch (err) {
+			return res.response(400, true, 'Failed to register new user', err)
+		}
 	},
 
 	// Update an account
-	update: (req, res) => {
-		const { id } = req.params
-		let { name, email, password } = req.body
+	update: async (req, res) => {
+		try {
+			const { id } = req.params
+			let { name, email, password } = req.body
+			const data = { name, email, password }
 
-		if (password) {
-			const salt = genSaltSync(10)
-			const hash = hashSync(password, salt)
-			password = hash
+			// Change password
+			if (password) data.password = hashSync(password, genSaltSync(10))
+
+			// Check user's id
+			const user = await User.get('id', id)
+			if (!user) return res.response(404, true, 'User is not found')
+
+			// Update user's account
+			const updated = await User.update(data)
+			if (updated) return res.response(200, false, 'Success to update an account', updated)
+		} catch (err) {
+			return res.response(400, true, 'Failed to update an account', err)
 		}
-
-		const data = [name, email, password]
-
-		User.update(data, id)
-			.then(() => {
-				success.message = 'Success to update an account'
-				success.data = data
-				res.status(200).json(data)
-			})
-			.catch(err => {
-				error.message = 'Failed to update an account'
-				error.data = err
-				res.status(400).json(error)
-			})
 	},
 
 	// Delete an account
-	delete: (req, res) => {
-		const { id } = req.params
+	delete: async (req, res) => {
+		try {
+			const { id } = req.params
 
-		User.delete(id)
-			.then(() => {
-				success.message = 'Success to delete an account'
-				res.status(200).json(success)
-			})
-			.catch(err => {
-				error.message = 'Failed to delete an account'
-				error.data = err
-				res.status(400).json(error)
-			})
-	}
+			// Check user's id
+			const user = await User.get('id', id)
+			if (!user) return res.response(404, true, 'User is not found')
+
+			// Delete user's account
+			const deleted = await User.delete(id)
+			if (deleted) return res.response(200, false, 'Success to delete an account', user)
+		} catch (err) {
+			return res.response(400, true, 'Failed to delete an account', err)
+		}
+	},
 }

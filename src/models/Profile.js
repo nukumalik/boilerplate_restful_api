@@ -1,47 +1,21 @@
 const db = require('../config/database')
 
+const promise = (sql, data = []) => {
+	return new Promise((resolve, rejected) => {
+		db.query(sql, data, (error, result) => error ? rejected(error) : resolve(result)
+	})
+}
+
 module.exports = {
 	// Get user profile
-	get: id => {
-		return new Promise((resolve, rejected) => {
-			const sql = 'select * from profiles where userId = ?'
-
-			db.query(sql, id, (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
-	},
+	get: id => promise('select * from profiles where userId = ?', id),
 
 	// Add user profile
-	add: (data, id) => {
-		return new Promise((resolve, rejected) => {
-			const sql = 'insert into profiles set ? where userId = ?'
-
-			db.query(sql, [data, id], (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
-	},
+	add: (data) => promise('insert into profiles set ?', data),
 
 	// Update user profile
-	update: (data, id) => {
-		return new Promise((resolve, rejected) => {
-			const sql = 'update profiles set ? where userId = ?'
-
-			db.query(sql, [data, id], (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
-	},
+	update: (data, id) => promise('update profiles set ? where userId = ?', [data, id]),
 
 	// Delete
-	delete: id => {
-		return new Promise((resolve, rejected) => {
-			const sql = 'delete from profiles where userId = ?'
-
-			db.query(sql, id, (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
-	}
+	delete: id => promise('delete from profiles where userId = ?', id)
 }

@@ -1,59 +1,29 @@
 const db = require('../config/database')
 
+const promise = (sql, data = []) => {
+	return new Promise((resolve, rejected) => {
+		db.query(sql, data, (error, result) => error ? rejected(error) : resolve(result)
+	})
+}
+
 module.exports = {
 	// Get user datas
-	get: id => {
-		return new Promise((resolve, rejected) => {
-			let sql = 'select * from users'
-			id ? (sql += ` where id=${id}`) : sql
+	get: (key, value) => {
+		let sql = 'select * from users'
+		if (key && value) sql += ` where ${key}=${value}`
 
-			db.query(sql, (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
+		return promise(sql);
 	},
 
 	// Login to user account
-	login: (email, password) => {
-		return new Promise((resolve, rejected) => {
-			const sql = 'select * from users where email = ? and password = ?'
-
-			db.query(sql, [email, password], (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
-	},
+	login: (email, password) => promise('select * from users where email = ? and password = ?', [email, password]),
 
 	// Register new account
-	register: data => {
-		return new Promise((resolve, rejected) => {
-			const sql = 'insert into users set ?'
-
-			db.query(sql, data, (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
-	},
+	register: data => promise('insert into users set ?', data),
 
 	// Update user account
-	update: (data, id) => {
-		return new Promise((resolve, rejected) => {
-			const sql = 'update users set ? where id = ?'
-
-			db.query(sql, [data, id], (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
-	},
+	update: (data, id) => promise('update users set ? where id = ?', [data, id]),
 
 	// Delete user account
-	delete: id => {
-		return new Promise((resolve, rejected) => {
-			const sql = 'delete from users where id = ?'
-
-			db.query(sql, id, (error, result) => {
-				error ? rejected(error) : resolve(result)
-			})
-		})
-	}
+	delete: id => promise('delete from users where id = ?', id)
 }
